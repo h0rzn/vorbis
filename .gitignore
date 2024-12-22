@@ -12,3 +12,5 @@ zig-out/
 *.flac
 *.mp3
 *.wav
+
+.DS_STORE

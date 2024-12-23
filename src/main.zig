@@ -12,16 +12,16 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const opts = cli.readOpts(allocator) catch |err| {
-        std.debug.print("Error reading options: {}\n", .{err});
-
+    const opts = cli.parse(allocator) catch |err| {
+        cli.printErr(err);
         return;
     };
+    std.debug.print("opts: {any}\n", .{opts});
+
     defer allocator.destroy(opts);
 
     const file: fs.File = audio_file.readFile(opts.f_name) catch |err| {
-        std.debug.print("Error reading file: {}\n", .{err});
-
+        cli.printErr(err);
         return;
     };
 

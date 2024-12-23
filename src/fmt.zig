@@ -1,5 +1,12 @@
 const std = @import("std");
 
+pub const Colors = struct {
+    pub const green = "\x1b[92m";
+    pub const red = "\x1b[91m";
+    pub const yellow = "\x1b[93m";
+    pub const reset = "\x1b[0m";
+};
+
 pub fn formatRaw(alloc: std.mem.Allocator, data: std.StringHashMap([]const u8), delim: []const u8) ![]u8 {
     var string = std.ArrayList(u8).init(alloc);
 

@@ -12,9 +12,10 @@ pub const OggError = error{
     PageHeaderMissingCapturePattern,
     PacketMalformed,
     PacketBadLength,
+    VorbisMissing,
 };
 
-pub fn readOGG(alloc: std.mem.Allocator, reader: *Reader) !?vorbis.VorbisComment {
+pub fn readOGG(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment {
     var i: usize = 0;
     var read_capture = false;
     while (true) {
@@ -36,7 +37,7 @@ pub fn readOGG(alloc: std.mem.Allocator, reader: *Reader) !?vorbis.VorbisComment
         i += 1;
         if (i == 1) read_capture = true;
     }
-    return null;
+    return OggError.VorbisMissing;
 }
 
 fn handleVorbis(alloc: std.mem.Allocator, data: []u8) !vorbis.VorbisComment {

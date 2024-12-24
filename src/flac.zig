@@ -8,9 +8,12 @@ pub const SIGNATURE = [4]u8{ 0x66, 0x4c, 0x61, 0x43 }; // ASCII: fLaC
 // TODO: up this
 const MAX_BLOCK_LEN = 200000;
 
-pub const FlacError = error{OversizedBlock};
+pub const FlacError = error{
+    OversizedBlock,
+    VorbisMissing,
+};
 
-pub fn readFLAC(alloc: std.mem.Allocator, reader: *Reader) !?vorbis.VorbisComment {
+pub fn readFLAC(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment {
     while (true) {
         const block_header_bytes = try reader.readN(4);
         const block_header = try parseMetadataBlockHeader(block_header_bytes);
@@ -33,7 +36,7 @@ pub fn readFLAC(alloc: std.mem.Allocator, reader: *Reader) !?vorbis.VorbisCommen
         }
     }
 
-    return null;
+    return FlacError.VorbisMissing;
 }
 
 const MetadataBlockHeader = enum { Streaminfo, Padding, Application, Seektable, VorbisComment, CueSheet, Picture, Ignore };

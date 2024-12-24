@@ -61,7 +61,14 @@ fn readOutMode(out_mode: []const u8) CliOptsError!OutMode {
     return CliOptsError.InvalidOutMode;
 }
 
-pub fn print(comptime format: []const u8, args: anytype) void {
+pub fn println(args: anytype) void {
+    // std.Progress.lockStdErr();
+    // defer std.Progress.unlockStdErr();
+    const stdout = io.getStdOut().writer();
+    nosuspend stdout.print("{s}\n", args) catch return;
+}
+
+pub fn printFmt(comptime format: []const u8, args: anytype) void {
     // std.Progress.lockStdErr();
     // defer std.Progress.unlockStdErr();
     const stdout = io.getStdOut().writer();
@@ -69,7 +76,7 @@ pub fn print(comptime format: []const u8, args: anytype) void {
 }
 
 pub fn printErr(err: anyerror) void {
-    print("{s}Error: {s}{s}\n", .{
+    printFmt("{s}Error: {s}{s}\n", .{
         fmt.Colors.red,
         fmt.Colors.reset,
         @errorName(err),

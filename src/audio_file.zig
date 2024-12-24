@@ -4,7 +4,9 @@ const flac = @import("flac.zig");
 const ogg = @import("ogg.zig");
 const Reader = @import("reader.zig").Reader;
 
-pub const AudioFileType = enum { FLAC, OGG, UNKOWN };
+pub const AudioFileType = enum { FLAC, OGG };
+
+pub const AudioFileError = error{MissingSignature};
 
 pub fn readFile(file_path: []const u8) !fs.File {
     var path_buffer: [fs.max_path_bytes]u8 = undefined;
@@ -20,5 +22,5 @@ pub fn readMarker(reader: *Reader) !AudioFileType {
 
     if (std.mem.eql(u8, &signature, &ogg.SIGNATURE)) return AudioFileType.OGG;
 
-    return AudioFileType.UNKOWN;
+    return AudioFileError.MissingSignature;
 }

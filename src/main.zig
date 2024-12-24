@@ -6,6 +6,8 @@ const flac = @import("flac.zig");
 const ogg = @import("ogg.zig");
 const fmt = @import("fmt.zig");
 const file_reader = @import("reader.zig");
+const vorbis = @import("vorbis.zig");
+const Reader = @import("reader.zig").Reader;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -16,7 +18,6 @@ pub fn main() !void {
         cli.printErr(err);
         return;
     };
-    std.debug.print("opts: {any}\n", .{opts});
 
     defer allocator.destroy(opts);
 
@@ -26,38 +27,40 @@ pub fn main() !void {
     };
 
     var reader = try file_reader.Reader.init(allocator, file);
-    const audio_type = try audio_file.readMarker(&reader);
-    switch (audio_type) {
-        .OGG => {
-            const vorbis_comment = try ogg.readOGG(allocator, &reader);
-            if (vorbis_comment) |comment| {
-                defer comment.deinit(allocator);
+    const audio_type = audio_file.readMarker(&reader) catch |err| {
+        cli.printErr(err);
+        return;
+    };
 
-                std.debug.print("{any}", .{vorbis_comment});
-            }
+    const vorbis_comment = readComment(allocator, &reader, audio_type) catch |err| {
+        cli.printErr(err);
+        return;
+    };
+
+    defer vorbis_comment.deinit(allocator);
+
+    switch (opts.out_mode) {
+        cli.OutMode.RawText => {
+            const comment_fmt_raw = try vorbis_comment.raw_text(allocator, "=");
+            defer allocator.free(comment_fmt_raw);
+            cli.println(.{comment_fmt_raw});
         },
-        .FLAC => {
-            const vorbis_comment = try flac.readFLAC(allocator, &reader);
-            if (vorbis_comment) |comment| {
-                defer comment.deinit(allocator);
-
-                const comment_fmt_raw = try comment.raw_text(allocator, "=");
-                defer allocator.free(comment_fmt_raw);
-                std.debug.print("{s}", .{comment_fmt_raw});
-
-                std.debug.print("\n", .{});
-
-                const comment_fmt_json = try comment.json(allocator);
-                defer allocator.free(comment_fmt_json);
-                std.debug.print("{s}", .{comment_fmt_json});
-
-                std.debug.print("\n\n", .{});
-
-                const comment_fmt_pretty = try comment.pretty(allocator);
-                std.debug.print("{s}\n", .{comment_fmt_pretty});
-                allocator.free(comment_fmt_pretty);
-            }
+        cli.OutMode.Pretty => {
+            const comment_fmt_pretty = try vorbis_comment.pretty(allocator);
+            allocator.free(comment_fmt_pretty);
+            cli.println(.{comment_fmt_pretty});
         },
-        else => std.log.err("illegal file marker", .{}),
+        cli.OutMode.Json => {
+            const comment_fmt_json = try vorbis_comment.json(allocator);
+            defer allocator.free(comment_fmt_json);
+            cli.println(.{comment_fmt_json});
+        },
     }
+}
+
+fn readComment(alloc: std.mem.Allocator, reader: *Reader, audio_type: audio_file.AudioFileType) !vorbis.VorbisComment {
+    return switch (audio_type) {
+        .OGG => try ogg.readOGG(alloc, reader),
+        .FLAC => try flac.readFLAC(alloc, reader),
+    };
 }

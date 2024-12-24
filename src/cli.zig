@@ -77,15 +77,22 @@ fn readOutMode(out_mode: []const u8) OptsError!OutMode {
     return OptsError.InvalidOutMode;
 }
 
-/// println prints out a value as string with following linebreak
-pub fn println(args: anytype) void {
+/// println prints out a value with following linebreak.
+/// if value is []u8 formats as string otherwise as any
+pub fn println(value: anytype) void {
+    std.Progress.lockStdErr();
+    defer std.Progress.unlockStdErr();
     const stdout = io.getStdOut().writer();
-    nosuspend stdout.print("{s}\n", args) catch return;
+
+    const templ = if (@TypeOf(value) == []u8) "{s}\n" else "{any}\n";
+    nosuspend stdout.print(templ, .{value}) catch return;
 }
 
 /// printFmt prints out args with format template format.
 /// This function acts like std.debug.print
 pub fn printFmt(comptime format: []const u8, args: anytype) void {
+    std.Progress.lockStdErr();
+    defer std.Progress.unlockStdErr();
     const stdout = io.getStdOut().writer();
     nosuspend stdout.print(format, args) catch return;
 }
@@ -114,7 +121,6 @@ pub fn printHexSlice(slice: []const u8) void {
     for (slice) |item| {
         printFmt("0x{x} ", .{item});
     }
-    println(.{});
 }
 
 /// printHexSlice prints array items in hex format

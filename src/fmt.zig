@@ -42,6 +42,7 @@ pub fn formatJSON(alloc: std.mem.Allocator, data: std.StringHashMap([]const u8))
 
 pub fn formatPretty(alloc: std.mem.Allocator, data: std.StringHashMap([]const u8)) ![]u8 {
     var string = std.ArrayList(u8).init(alloc);
+    defer string.deinit();
 
     var tag_iter = data.iterator();
     while (tag_iter.next()) |tag_entry| {
@@ -51,7 +52,7 @@ pub fn formatPretty(alloc: std.mem.Allocator, data: std.StringHashMap([]const u8
         _ = try string.writer().write("\n");
     }
 
-    return string.toOwnedSlice();
+    return try string.toOwnedSlice();
 }
 
 fn formatKV(alloc: std.mem.Allocator, key: []const u8, value: []const u8) ![]u8 {

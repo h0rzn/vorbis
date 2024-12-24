@@ -43,17 +43,17 @@ pub fn main() !void {
         cli.OutMode.RawText => {
             const comment_fmt_raw = try vorbis_comment.raw_text(allocator, "=");
             defer allocator.free(comment_fmt_raw);
-            cli.println(.{comment_fmt_raw});
+            cli.println(comment_fmt_raw);
         },
         cli.OutMode.Pretty => {
             const comment_fmt_pretty = try vorbis_comment.pretty(allocator);
-            allocator.free(comment_fmt_pretty);
-            cli.println(.{comment_fmt_pretty});
+            defer allocator.free(comment_fmt_pretty);
+            cli.println(comment_fmt_pretty);
         },
         cli.OutMode.Json => {
             const comment_fmt_json = try vorbis_comment.json(allocator);
             defer allocator.free(comment_fmt_json);
-            cli.println(.{comment_fmt_json});
+            cli.println(comment_fmt_json);
         },
     }
 }

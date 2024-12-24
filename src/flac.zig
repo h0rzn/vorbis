@@ -1,6 +1,7 @@
 const std = @import("std");
 const fs = std.fs;
 const vorbis = @import("vorbis.zig");
+const cli = @import("cli.zig");
 const Reader = @import("reader.zig").Reader;
 
 pub const SIGNATURE = [4]u8{ 0x66, 0x4c, 0x61, 0x43 }; // ASCII: fLaC
@@ -18,7 +19,7 @@ pub fn readFLAC(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment
         const block_header_bytes = try reader.readN(4);
         const block_header = try parseMetadataBlockHeader(block_header_bytes);
         if (block_header.len > MAX_BLOCK_LEN) {
-            std.log.err("Block size for {} ({}) exceeds max block len {}\n", .{ block_header.type, block_header.len, MAX_BLOCK_LEN });
+            cli.printAsErr("Block size for {} ({}) exceeds max block len {}\n", .{ block_header.type, block_header.len, MAX_BLOCK_LEN });
 
             return FlacError.OversizedBlock;
         }
@@ -57,15 +58,4 @@ fn parseMetadataBlockHeader(header: [4]u8) !BlockHeader {
         .last = is_last,
         .len = block_length,
     };
-}
-
-fn printHexSlice(slice: []const u8) void {
-    for (slice) |item| {
-        std.debug.print("0x{x} ", .{item});
-    }
-    std.debug.print("\n", .{});
-}
-
-fn printHexArray(comptime n: usize, array: [n]u8) void {
-    printHexSlice(&array);
 }

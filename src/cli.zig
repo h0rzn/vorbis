@@ -1,23 +1,38 @@
 const std = @import("std");
 const io = std.io;
 const clap = @import("clap");
-
 const fmt = @import("fmt.zig");
 
-pub const CliOpts = struct {
+/// Opts stores available cli input values (params)
+pub const Opts = struct {
     out_mode: OutMode,
     f_name: []const u8,
 };
 
+/// OutMode represents output modes.
 pub const OutMode = enum {
+    /// Pretty is color formatted output
     Pretty,
+    /// Json is unformatted string output in json format
     Json,
+    /// RawText is the default mode. Format is KV with "=" delim
     RawText,
 };
 
-pub const CliOptsError = error{ NoArgs, InvalidOutMode, NoFilename };
+pub const OptsError = error{
+    // NoArgs is returned if no arguments have been passed
+    NoArgs,
+    // InvalidOutMode is returned if outmode has illegal value
+    // or is missing
+    InvalidOutMode,
+    // NoFilename is returned if filename is missing
+    NoFilename,
+};
 
-pub fn parse(alloc: std.mem.Allocator) !*CliOpts {
+/// parse parses the cli input params using zig-clap.
+/// This function returns Opts containing the values
+/// for available flags.
+pub fn parse(alloc: std.mem.Allocator) !*Opts {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help            Display this help.
         \\-i, --input <STR>     Specify audio file name.
@@ -30,7 +45,7 @@ pub fn parse(alloc: std.mem.Allocator) !*CliOpts {
         .allocator = alloc,
     });
 
-    const opts = try alloc.create(CliOpts);
+    const opts = try alloc.create(Opts);
     errdefer alloc.destroy(opts);
     var param_count: u8 = 0;
 
@@ -38,7 +53,7 @@ pub fn parse(alloc: std.mem.Allocator) !*CliOpts {
         param_count += 1;
         opts.f_name = filename;
     } else {
-        return CliOptsError.NoFilename;
+        return OptsError.NoFilename;
     }
 
     if (res.args.format) |format| {
@@ -48,37 +63,61 @@ pub fn parse(alloc: std.mem.Allocator) !*CliOpts {
         opts.out_mode = OutMode.RawText;
     }
 
-    if (param_count == 0) return CliOptsError.NoArgs;
+    if (param_count == 0) return OptsError.NoArgs;
 
     return opts;
 }
 
-fn readOutMode(out_mode: []const u8) CliOptsError!OutMode {
+/// readOutMode maps out_mode to a OutMode field
+fn readOutMode(out_mode: []const u8) OptsError!OutMode {
     if (std.mem.eql(u8, out_mode, "pretty")) return .Pretty;
     if (std.mem.eql(u8, out_mode, "json")) return .Json;
     if (std.mem.eql(u8, out_mode, "raw")) return .RawText;
 
-    return CliOptsError.InvalidOutMode;
+    return OptsError.InvalidOutMode;
 }
 
+/// println prints out a value as string with following linebreak
 pub fn println(args: anytype) void {
-    // std.Progress.lockStdErr();
-    // defer std.Progress.unlockStdErr();
     const stdout = io.getStdOut().writer();
     nosuspend stdout.print("{s}\n", args) catch return;
 }
 
+/// printFmt prints out args with format template format.
+/// This function acts like std.debug.print
 pub fn printFmt(comptime format: []const u8, args: anytype) void {
-    // std.Progress.lockStdErr();
-    // defer std.Progress.unlockStdErr();
     const stdout = io.getStdOut().writer();
     nosuspend stdout.print(format, args) catch return;
 }
 
+/// printErr prints formatted output containing the error name
 pub fn printErr(err: anyerror) void {
     printFmt("{s}Error: {s}{s}\n", .{
         fmt.Colors.red,
         fmt.Colors.reset,
         @errorName(err),
     });
+}
+
+/// printAsErr works like std.debug.print or cli.printFmt
+/// but also applies formatting as if the passed message
+/// was an error
+pub fn printAsErr(comptime message_format: []const u8, args: anytype) void {
+    printFmt("{s}Error: {s}" ++ message_format ++ "\n", .{
+        fmt.Colors.red,
+        fmt.Colors.reset,
+    } ++ args);
+}
+
+/// printHexSlice prints slice items in hex format
+pub fn printHexSlice(slice: []const u8) void {
+    for (slice) |item| {
+        printFmt("0x{x} ", .{item});
+    }
+    println(.{});
+}
+
+/// printHexSlice prints array items in hex format
+pub fn printHexArray(comptime n: usize, array: [n]u8) void {
+    printHexSlice(&array);
 }

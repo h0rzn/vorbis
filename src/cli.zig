@@ -2,11 +2,13 @@ const std = @import("std");
 const io = std.io;
 const clap = @import("clap");
 const fmt = @import("fmt.zig");
+const util = @import("util.zig");
 
 /// Opts stores available cli input values (params)
 pub const Opts = struct {
     out_mode: OutMode,
     f_name: []const u8,
+    filter: ?util.StringArrayList,
 };
 
 /// OutMode represents output modes.
@@ -36,6 +38,7 @@ pub fn parse(alloc: std.mem.Allocator) !*Opts {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help            Display this help.
         \\-i, --input <STR>     Specify audio file name.
+        \\-g, --get <STR>       Get Comment field by name.
         \\-f, --format <STR>    Specifiy output format.
     );
 
@@ -45,7 +48,7 @@ pub fn parse(alloc: std.mem.Allocator) !*Opts {
         .allocator = alloc,
     });
 
-    const opts = try alloc.create(Opts);
+    var opts = try alloc.create(Opts);
     errdefer alloc.destroy(opts);
     var param_count: u8 = 0;
 
@@ -54,6 +57,22 @@ pub fn parse(alloc: std.mem.Allocator) !*Opts {
         opts.f_name = filename;
     } else {
         return OptsError.NoFilename;
+    }
+
+    if (res.args.get) |keys| {
+        var filter = util.StringArrayList.init(alloc);
+        errdefer filter.deinit();
+        param_count += 1;
+
+        var key_iter = std.mem.splitSequence(u8, keys, ",");
+        while (key_iter.next()) |key| {
+            if (key.len > 0) {
+                try filter.put(key);
+            }
+        }
+        opts.filter = filter;
+    } else {
+        opts.filter = null;
     }
 
     if (res.args.format) |format| {

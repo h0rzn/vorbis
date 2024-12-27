@@ -77,7 +77,7 @@ pub const VorbisComment = struct {
     }
 
     pub fn json(vc: *const VorbisComment, alloc: std.mem.Allocator) ![]u8 {
-        return try fmt.formatJSON(alloc, vc.tags);
+        return try fmt.formatJSON(alloc, vc.tags, null);
     }
 
     pub fn raw_text(vc: *const VorbisComment, alloc: std.mem.Allocator, delim: []const u8) ![]u8 {

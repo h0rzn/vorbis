@@ -42,9 +42,12 @@ pub fn main() !void {
     };
     defer vorbis_comment.deinit(allocator);
 
-    output(allocator, &vorbis_comment, opts) catch |err| {
+    const output = fmt.format(allocator, vorbis_comment.tags, opts.out_mode, opts.filter) catch |err| {
         cli.printErr(err);
+        return;
     };
+    defer allocator.free(output);
+    cli.println(output);
 }
 
 fn readComment(alloc: std.mem.Allocator, reader: *Reader, audio_type: audio_file.AudioFileType) !vorbis.VorbisComment {
@@ -52,46 +55,4 @@ fn readComment(alloc: std.mem.Allocator, reader: *Reader, audio_type: audio_file
         .OGG => try ogg.readOGG(alloc, reader),
         .FLAC => try flac.readFLAC(alloc, reader),
     };
-}
-
-fn output(alloc: std.mem.Allocator, vorbis_comment: *const vorbis.VorbisComment, opts: *cli.Opts) !void {
-    if (opts.filter) |filter| {
-        outputFiltered(alloc, vorbis_comment, filter) catch |err| {
-            cli.printErr(err);
-        };
-    } else {
-        outputFull(alloc, vorbis_comment, opts) catch |err| {
-            cli.printErr(err);
-        };
-    }
-}
-
-/// outputFiltered outputs a single vorbis field based on key defined
-/// in cli.Opts.key. For now this output ignores the --format switch
-fn outputFiltered(alloc: std.mem.Allocator, vorbis_comment: *const vorbis.VorbisComment, filter: util.StringArrayList) !void {
-    const json = try fmt.formatJSON(alloc, vorbis_comment.tags, filter);
-    defer alloc.free(json);
-    cli.println(json);
-}
-
-// outputFull outputs the complete vorbis set in the desired format as
-// defined in cli.Opts.out_mode
-fn outputFull(alloc: std.mem.Allocator, vorbis_comment: *const vorbis.VorbisComment, opts: *cli.Opts) !void {
-    switch (opts.out_mode) {
-        cli.OutMode.RawText => {
-            const comment_fmt_raw = try vorbis_comment.raw_text(alloc, "=");
-            defer alloc.free(comment_fmt_raw);
-            cli.println(comment_fmt_raw);
-        },
-        cli.OutMode.Pretty => {
-            const comment_fmt_pretty = try vorbis_comment.pretty(alloc);
-            defer alloc.free(comment_fmt_pretty);
-            cli.println(comment_fmt_pretty);
-        },
-        cli.OutMode.Json => {
-            const comment_fmt_json = try vorbis_comment.json(alloc);
-            defer alloc.free(comment_fmt_json);
-            cli.println(comment_fmt_json);
-        },
-    }
 }

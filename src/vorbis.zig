@@ -80,12 +80,12 @@ pub const VorbisComment = struct {
         return try fmt.formatJSON(alloc, vc.tags, null);
     }
 
-    pub fn raw_text(vc: *const VorbisComment, alloc: std.mem.Allocator, delim: []const u8) ![]u8 {
-        return try fmt.formatRaw(alloc, vc.tags, delim);
+    pub fn raw_text(vc: *const VorbisComment, alloc: std.mem.Allocator) ![]u8 {
+        return try fmt.formatRaw(alloc, vc.tags, null);
     }
 
     pub fn pretty(vc: *const VorbisComment, alloc: std.mem.Allocator) ![]u8 {
-        return try fmt.formatPretty(alloc, vc.tags);
+        return try fmt.formatPretty(alloc, vc.tags, null);
     }
 };
 

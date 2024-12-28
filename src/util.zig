@@ -6,6 +6,7 @@ fn SliceArrayList(T: type) type {
     return struct {
         const Self = @This();
         slices: std.ArrayList([]const T),
+        // count: usize,
         alloc: std.mem.Allocator,
 
         pub const Iterator = struct {
@@ -39,8 +40,13 @@ fn SliceArrayList(T: type) type {
 
         pub fn put(self: *Self, block: []const T) !void {
             const owned_slice = try self.alloc.dupe(u8, block);
-            errdefer self.alloc.free(owned_slice);
+            // defer self.alloc.free(owned_slice);
             try self.slices.append(owned_slice);
+            // self.count = self.count + 1;
+        }
+
+        pub fn count(self: *const Self) usize {
+            return self.slices.items.len;
         }
 
         pub fn iter(self: *const Self) Iterator {

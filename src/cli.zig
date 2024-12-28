@@ -49,7 +49,9 @@ pub fn parse(alloc: std.mem.Allocator) !*Opts {
     });
 
     var opts = try alloc.create(Opts);
-    errdefer alloc.destroy(opts);
+    errdefer {
+        alloc.destroy(opts);
+    }
     var param_count: u8 = 0;
 
     if (res.args.input) |filename| {
@@ -61,7 +63,9 @@ pub fn parse(alloc: std.mem.Allocator) !*Opts {
 
     if (res.args.get) |keys| {
         var filter = util.StringArrayList.init(alloc);
-        errdefer filter.deinit();
+        errdefer {
+            filter.deinit();
+        }
         param_count += 1;
 
         var key_iter = std.mem.splitSequence(u8, keys, ",");

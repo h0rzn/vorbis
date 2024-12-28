@@ -42,7 +42,7 @@ pub fn main() !void {
     };
     defer vorbis_comment.deinit(allocator);
 
-    const output = fmt.format(allocator, vorbis_comment.tags, opts.out_mode, opts.filter) catch |err| {
+    const output = fmt.format(allocator, &vorbis_comment, opts.out_mode, opts.filter) catch |err| {
         cli.printErr(err);
         return;
     };

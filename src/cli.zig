@@ -71,7 +71,9 @@ pub fn parse(alloc: std.mem.Allocator) !*Opts {
         var key_iter = std.mem.splitSequence(u8, keys, ",");
         while (key_iter.next()) |key| {
             if (key.len > 0) {
-                try filter.put(key);
+                var upper_key_buf: [100]u8 = undefined;
+                const upper_key = std.ascii.upperString(&upper_key_buf, key);
+                try filter.put(upper_key);
             }
         }
         opts.filter = filter;

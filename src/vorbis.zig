@@ -2,6 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 const fmt = @import("fmt.zig");
 const Reader = @import("reader.zig").Reader;
+const StringArrayList = @import("util.zig").StringArrayList;
 
 pub const SIGNATURE = [6]u8{ 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73 }; // ASCII: vorbis
 
@@ -42,7 +43,7 @@ pub fn parseVorbisComment(allocator: std.mem.Allocator, block: []u8) !VorbisComm
     };
 }
 
-const VorbisTag = struct {
+pub const VorbisTag = struct {
     key: []const u8,
     val: []const u8,
 };
@@ -61,6 +62,29 @@ fn split(alloc: std.mem.Allocator, comment: []const u8) !VorbisTag {
 pub const VorbisComment = struct {
     vendor_string: []u8,
     tags: std.StringHashMap([]const u8),
+
+    pub const FilterIterator = struct {
+        vc: *const VorbisComment,
+        filter: StringArrayList,
+        index: usize,
+
+        pub fn next(self: *FilterIterator) ?VorbisTag {
+            if (self.index < self.filter.count()) {
+                const filter_key = self.filter.slices.items[self.index];
+                var upper_key_buf: [100]u8 = undefined;
+                const upper_key = std.ascii.upperString(&upper_key_buf, filter_key);
+                const value = self.vc.tags.get(upper_key);
+                self.index += 1;
+                if (value) |v| {
+                    return .{
+                        .key = filter_key,
+                        .val = v,
+                    };
+                }
+            }
+            return null;
+        }
+    };
 
     pub fn deinit(vc: VorbisComment, alloc: std.mem.Allocator) void {
         alloc.free(vc.vendor_string);
@@ -86,6 +110,14 @@ pub const VorbisComment = struct {
 
     pub fn pretty(vc: *const VorbisComment, alloc: std.mem.Allocator) ![]u8 {
         return try fmt.formatPretty(alloc, vc.tags, null);
+    }
+
+    pub fn filterIter(vc: *const VorbisComment, filter: StringArrayList) FilterIterator {
+        return FilterIterator{
+            .vc = vc,
+            .filter = filter,
+            .index = 0,
+        };
     }
 };
 

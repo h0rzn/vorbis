@@ -16,9 +16,9 @@ pub const Colors = struct {
 /// Supports optional key filtering
 pub fn format(alloc: std.mem.Allocator, vorbis_comment: *const vorbis.VorbisComment, mode: cli.OutMode, filter: ?util.StringArrayList) ![]u8 {
     return switch (mode) {
-        .RawText => formatRaw(alloc, vorbis_comment, filter),
-        .Pretty => formatPretty(alloc, vorbis_comment, filter),
-        .Json => formatJSON(alloc, vorbis_comment, filter),
+        .rawText => formatRaw(alloc, vorbis_comment, filter),
+        .pretty => formatPretty(alloc, vorbis_comment, filter),
+        .json => formatJSON(alloc, vorbis_comment, filter),
     };
 }
 

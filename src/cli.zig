@@ -14,11 +14,11 @@ pub const Opts = struct {
 /// OutMode represents output modes.
 pub const OutMode = enum {
     /// Pretty is color formatted output
-    Pretty,
+    pretty,
     /// Json is unformatted string output in json format
-    Json,
+    json,
     /// RawText is the default mode. Format is KV with "=" delim
-    RawText,
+    rawText,
 };
 
 pub const OptsError = error{
@@ -29,46 +29,85 @@ pub const OptsError = error{
     InvalidOutMode,
     // NoFilename is returned if filename is missing
     NoFilename,
+    ParamError,
 };
+
+const params = clap.parseParamsComptime(
+    \\ -h, --help                       Show usage help and exit.
+    \\ -v, --version                    Show version information and exit.
+    \\ <file>                           Specify one or more input files. Supports both .ogg and .flac.
+    \\ -o, --output-format <format>     Specify output format. Supported formats: raw, pretty, json
+    \\ -f, --fields <keys>              Specify fields to display by key. Use a comma separated list for multiple values.
+);
+
+const parsers = .{
+    .file = clap.parsers.string,
+    .format = clap.parsers.string,
+    .keys = clap.parsers.string,
+    .OUT_MODE = clap.parsers.enumeration(OutMode),
+};
+
+pub var diag = clap.Diagnostic{};
 
 /// parse parses the cli input params using zig-clap.
 /// This function returns Opts containing the values
 /// for available flags.
-pub fn parse(alloc: std.mem.Allocator) !*Opts {
-    const params = comptime clap.parseParamsComptime(
-        \\-h, --help            Display this help.
-        \\-i, --input <STR>     Specify audio file name.
-        \\-g, --get <STR>       Get Comment field by name.
-        \\-f, --format <STR>    Specifiy output format.
-    );
-
-    const parsers = comptime .{ .STR = clap.parsers.string };
-
-    const res = try clap.parse(clap.Help, &params, parsers, .{
+pub fn parse(alloc: std.mem.Allocator) !OptsResult {
+    const res = clap.parse(clap.Help, &params, parsers, .{
+        .diagnostic = &diag,
         .allocator = alloc,
-    });
+    }) catch |err| {
+        std.debug.print("err!\n", .{});
+        diag.report(std.io.getStdErr().writer(), err) catch {};
+        // return error.ParamError;
+        return err;
+    };
+    defer res.deinit();
+
+    return try createOpts(alloc, res);
+}
+
+pub const OptsResult = union(enum) {
+    version: void,
+    help: void,
+    output: *Opts,
+};
+
+fn createOpts(alloc: std.mem.Allocator, result: clap.Result(clap.Help, &params, parsers)) !OptsResult {
+    if (result.args.help != 0) {
+        return .help;
+    }
+
+    if (result.args.version != 0) {
+        return .version;
+    }
 
     var opts = try alloc.create(Opts);
     errdefer {
         alloc.destroy(opts);
     }
-    var param_count: u8 = 0;
 
-    if (res.args.input) |filename| {
-        param_count += 1;
-        opts.f_name = filename;
-    } else {
+    const filenames = result.positionals;
+    if (filenames.len == 0) {
         return OptsError.NoFilename;
     }
-
-    if (res.args.get) |keys| {
-        var filter = util.StringArrayList.init(alloc);
-        errdefer {
-            filter.deinit();
+    for (0..filenames.len, filenames) |i, filename| {
+        if (i == 0) {
+            opts.f_name = filename;
+        } else {
+            printFmt("multi file support not implemented, skipping: {s}\n", .{filename});
         }
-        param_count += 1;
+    }
 
-        var key_iter = std.mem.splitSequence(u8, keys, ",");
+    if (result.args.@"output-format") |format| {
+        opts.out_mode = try readOutMode(format);
+    }
+
+    if (result.args.fields) |fields| {
+        var filter = util.StringArrayList.init(alloc);
+        errdefer filter.deinit();
+
+        var key_iter = std.mem.splitSequence(u8, fields, ",");
         while (key_iter.next()) |key| {
             if (key.len > 0) {
                 var upper_key_buf: [100]u8 = undefined;
@@ -81,25 +120,24 @@ pub fn parse(alloc: std.mem.Allocator) !*Opts {
         opts.filter = null;
     }
 
-    if (res.args.format) |format| {
-        param_count += 1;
-        opts.out_mode = try readOutMode(format);
-    } else {
-        opts.out_mode = OutMode.RawText;
-    }
-
-    if (param_count == 0) return OptsError.NoArgs;
-
-    return opts;
+    return .{ .output = opts };
 }
 
 /// readOutMode maps out_mode to a OutMode field
 fn readOutMode(out_mode: []const u8) OptsError!OutMode {
-    if (std.mem.eql(u8, out_mode, "pretty")) return .Pretty;
-    if (std.mem.eql(u8, out_mode, "json")) return .Json;
-    if (std.mem.eql(u8, out_mode, "raw")) return .RawText;
+    if (std.mem.eql(u8, out_mode, "pretty")) return .pretty;
+    if (std.mem.eql(u8, out_mode, "json")) return .json;
+    if (std.mem.eql(u8, out_mode, "raw")) return .rawText;
 
     return OptsError.InvalidOutMode;
+}
+
+pub fn help() !void {
+    try clap.help(std.io.getStdErr().writer(), clap.Help, &params, .{});
+}
+
+pub fn version() void {
+    std.debug.print("<< version info here >>\n", .{});
 }
 
 /// println prints out a value with following linebreak.

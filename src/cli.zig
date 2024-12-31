@@ -22,15 +22,16 @@ pub const OutMode = enum {
 };
 
 pub const OptsError = error{
-    // NoArgs is returned if no arguments have been passed
-    NoArgs,
     // InvalidOutMode is returned if outmode has illegal value
     // or is missing
     InvalidOutMode,
     // NoFilename is returned if filename is missing
     NoFilename,
-    ParamError,
-};
+    // NOOPParseError indicates an error when clap errors when parsing
+    // input params. 'NOOP' means that error output is handled by the parse()
+    // so the function receiving the error must not handle it
+    NOOPParseError,
+} || std.mem.Allocator.Error;
 
 const params = clap.parseParamsComptime(
     \\ -h, --help                       Show usage help and exit.
@@ -57,10 +58,8 @@ pub fn parse(alloc: std.mem.Allocator) !OptsResult {
         .diagnostic = &diag,
         .allocator = alloc,
     }) catch |err| {
-        std.debug.print("err!\n", .{});
         diag.report(std.io.getStdErr().writer(), err) catch {};
-        // return error.ParamError;
-        return err;
+        return OptsError.NOOPParseError;
     };
     defer res.deinit();
 
@@ -73,7 +72,7 @@ pub const OptsResult = union(enum) {
     output: *Opts,
 };
 
-fn createOpts(alloc: std.mem.Allocator, result: clap.Result(clap.Help, &params, parsers)) !OptsResult {
+fn createOpts(alloc: std.mem.Allocator, result: clap.Result(clap.Help, &params, parsers)) OptsError!OptsResult {
     if (result.args.help != 0) {
         return .help;
     }
@@ -95,7 +94,7 @@ fn createOpts(alloc: std.mem.Allocator, result: clap.Result(clap.Help, &params, 
         if (i == 0) {
             opts.f_name = filename;
         } else {
-            printFmt("multi file support not implemented, skipping: {s}\n", .{filename});
+            printFmt("{s}Warning{s}: multi file support not implemented, skipping: arg {s}\n", .{ fmt.Colors.yellow, fmt.Colors.reset, filename });
         }
     }
 
@@ -147,8 +146,15 @@ pub fn println(value: anytype) void {
     defer std.Progress.unlockStdErr();
     const stdout = io.getStdOut().writer();
 
-    const templ = if (@TypeOf(value) == []u8) "{s}\n" else "{any}\n";
-    nosuspend stdout.print(templ, .{value}) catch return;
+    if (@TypeOf(value) == []u8) {
+        if (value.len == 0) {
+            return;
+        }
+
+        nosuspend stdout.print("{s}\n", .{value}) catch return;
+    } else {
+        nosuspend stdout.print("{any}\n", .{value}) catch return;
+    }
 }
 
 /// printFmt prints out args with format template format.

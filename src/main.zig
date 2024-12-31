@@ -17,11 +17,13 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     const opts = cli.parse(allocator) catch |err| {
-        // switch (err) {
-        //     cli.OptsError.NoFilename => cli.printAsErr("{s}", .{"missing filename"}),
-        //     else => cli.printErr(err),
-        // }
-        cli.printErr(err);
+        switch (err) {
+            cli.OptsError.NoFilename => cli.printAsErr("{s}", .{"Missing filename"}),
+            cli.OptsError.InvalidOutMode => cli.printAsErr("{s}", .{"Invalid output format"}),
+            cli.OptsError.OutOfMemory => cli.printAsErr("{s}", .{"Out of memory"}),
+            cli.OptsError.NOOPParseError => {}, // error printing is handled by cli.parse(),
+        }
+
         return;
     };
 

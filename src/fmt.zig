@@ -107,5 +107,5 @@ pub fn formatPretty(alloc: std.mem.Allocator, vorbis_comment: *const vorbis.Vorb
 
 /// formatKV formats a KV-pair with color
 fn formatKV(alloc: std.mem.Allocator, key: []const u8, value: []const u8) ![]u8 {
-    return try std.fmt.allocPrint(alloc, "\x1b[92m{s}\x1b[0m: {s}", .{ key, value });
+    return try std.fmt.allocPrint(alloc, "{s}{s}{s}: {s}", .{ Colors.green, key, Colors.reset, value });
 }

@@ -1,5 +1,10 @@
 const std = @import("std");
 
+/// Reader provides reader utility functions
+/// for a std.fs.File. It wraps a
+/// std.io.BufferedReader with buffersize 4096.
+/// Read operations can be mixed but advance the reader
+/// irreversably.
 pub const Reader = struct {
     alloc: std.mem.Allocator,
     file: std.fs.File,
@@ -13,13 +18,21 @@ pub const Reader = struct {
         };
     }
 
+    /// readOne reads a single byte and returns a u8. If reading fails
+    /// it errors. If bytes read is not exactly 1, UnexpectedOEF is returned.
     pub fn readOne(r: *Reader) !u8 {
-        var bit: [1]u8 = undefined;
-        const read_count = try r.buf_reader.read(&bit);
+        // version 1
+        var byte: [1]u8 = undefined;
+        const read_count = try r.buf_reader.read(&byte);
 
-        return if (read_count == 1) bit[0] else error.UnexpectedOEF;
+        // version 2
+        r.buf_reader.reader().readByte();
+        // ...
+
+        return if (read_count == 1) byte[0] else error.UnexpectedOEF;
     }
 
+    /// readN reads n bytes. Returns read error or UnexpectedEOF when failing.
     pub fn readN(r: *Reader, comptime n: usize) ![n]u8 {
         var mem: [n]u8 = undefined;
         const bytes_read = try r.buf_reader.read(&mem);
@@ -30,12 +43,8 @@ pub const Reader = struct {
         return mem;
     }
 
-    pub fn readAsT(r: *Reader, comptime T: type) !T {
-        const bytes = try r.readN(@sizeOf(T));
-
-        return std.mem.readInt(T, &bytes, .little);
-    }
-
+    /// readNSlice reads dynamic amount of bytes n as slice. Returns read error
+    /// or UnexpectedEOF when failing.
     pub fn readNSlice(r: *Reader, allocator: std.mem.Allocator, n: usize) ![]u8 {
         const buffer = try allocator.alloc(u8, n);
         errdefer allocator.free(buffer);
@@ -49,12 +58,15 @@ pub const Reader = struct {
         return buffer;
     }
 
-    pub fn skipN(r: *Reader, n: u64) !void {
-        try r.buf_reader.reader().skipBytes(n, .{});
+    /// readAsT reads @sizeOf(T) bytes and interpretes them as type T.
+    pub fn readAsT(r: *Reader, comptime T: type) !T {
+        const bytes = try r.readN(@sizeOf(T));
+
+        return std.mem.readInt(T, &bytes, .little);
     }
 
-    // TODO: implement
-    pub fn close(r: *Reader) !void {
-        _ = r;
+    /// skipN skips the next n bytes.
+    pub fn skipN(r: *Reader, n: u64) !void {
+        try r.buf_reader.reader().skipBytes(n, .{});
     }
 };

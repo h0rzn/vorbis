@@ -4,16 +4,22 @@ const vorbis = @import("vorbis.zig");
 const cli = @import("cli.zig");
 const Reader = @import("reader.zig").Reader;
 
-pub const SIGNATURE = [4]u8{ 0x66, 0x4c, 0x61, 0x43 }; // ASCII: fLaC
+/// SIGNATURE are the "magic bytes" that mark flac.
+/// ASCII: flaC
+pub const SIGNATURE = [4]u8{ 0x66, 0x4c, 0x61, 0x43 };
 
-// TODO: up this
+/// MAX_BLOCK_LEN describes the maximum length of a flac block
 const MAX_BLOCK_LEN = 200000;
 
 pub const FlacError = error{
+    /// OversizedBlock is returned if block size is > MAX_BLOCK_LEN
     OversizedBlock,
+    /// VorbisMissing is returned when vorbis signature was
+    /// expected but could not be found
     VorbisMissing,
 };
 
+/// readFLAC uses the audio file reader to parse a VorbisComment.
 pub fn readFLAC(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment {
     while (true) {
         const block_header_bytes = try reader.readN(4);
@@ -40,14 +46,18 @@ pub fn readFLAC(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment
     return FlacError.VorbisMissing;
 }
 
+/// MetadataBlockHeader stores possible Block Types
 const MetadataBlockHeader = enum { Streaminfo, Padding, Application, Seektable, VorbisComment, CueSheet, Picture, Ignore };
 
+/// BlockHeader is the header for a block
 const BlockHeader = struct {
     type: MetadataBlockHeader,
     last: bool = false,
     len: u24,
 };
 
+/// parseMetadataBlockHeader parses a BlockHeader from
+/// given block header bytes
 fn parseMetadataBlockHeader(header: [4]u8) !BlockHeader {
     const is_last = (header[0] & 0x80) != 0;
     const block_type = @as(u7, @truncate(header[0] & 0x7F));

@@ -74,6 +74,8 @@ pub fn main() !void {
     }
 }
 
+/// readComment runs a read function based on audio_type.
+/// Returns VorbisComment or error.
 fn readComment(alloc: std.mem.Allocator, reader: *Reader, audio_type: audio_file.AudioFileType) !vorbis.VorbisComment {
     return switch (audio_type) {
         .OGG => try ogg.readOGG(alloc, reader),

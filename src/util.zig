@@ -2,11 +2,15 @@ const std = @import("std");
 
 pub const StringArrayList = SliceArrayList(u8);
 
+/// SliceArrayList is an ArrayList([]const T).
+/// Provides an Iterator to iterate items by
+/// returning []const T. Items can be added
+/// by calling 'put', but removing them is not
+/// supported.
 fn SliceArrayList(T: type) type {
     return struct {
         const Self = @This();
         slices: std.ArrayList([]const T),
-        // count: usize,
         alloc: std.mem.Allocator,
 
         pub const Iterator = struct {
@@ -38,17 +42,21 @@ fn SliceArrayList(T: type) type {
             self.slices.deinit();
         }
 
+        /// put appends a block to the internal ArrayList.
+        /// Block is duped and appended to the internal ArrayList.
+        /// Memory is managed internally.
         pub fn put(self: *Self, block: []const T) !void {
             const owned_slice = try self.alloc.dupe(u8, block);
-            // defer self.alloc.free(owned_slice);
             try self.slices.append(owned_slice);
-            // self.count = self.count + 1;
         }
 
+        /// count returns the amount of blocks stored in the
+        /// internal ArrayList
         pub fn count(self: *const Self) usize {
             return self.slices.items.len;
         }
 
+        /// iter returns the iterator for stored blocks.
         pub fn iter(self: *const Self) Iterator {
             return Iterator{
                 .slices = &self.slices,

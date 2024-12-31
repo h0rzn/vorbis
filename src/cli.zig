@@ -22,21 +22,21 @@ pub const OutMode = enum {
 };
 
 pub const OptsError = error{
-    // InvalidOutMode is returned if outmode has illegal value
-    // or is missing
+    /// InvalidOutMode is returned if outmode has illegal value
+    /// or is missing
     InvalidOutMode,
-    // NoFilename is returned if filename is missing
+    /// NoFilename is returned if filename is missing
     NoFilename,
-    // NOOPParseError indicates an error when clap errors when parsing
-    // input params. 'NOOP' means that error output is handled by the parse()
-    // so the function receiving the error must not handle it
+    /// NOOPParseError indicates an error when clap errors when parsing
+    /// input params. 'NOOP' means that error output is handled by the parse()
+    /// so the function receiving the error must not handle it
     NOOPParseError,
 } || std.mem.Allocator.Error;
 
 const params = clap.parseParamsComptime(
     \\ -h, --help                       Show usage help and exit.
     \\ -v, --version                    Show version information and exit.
-    \\ <file>                           Specify one or more input files. Supports both .ogg and .flac.
+    \\ <file>                           Specify input file. Supports both .ogg and .flac files.
     \\ -o, --output-format <format>     Specify output format. Supported formats: raw, pretty, json
     \\ -f, --fields <keys>              Specify fields to display by key. Use a comma separated list for multiple values.
 );
@@ -45,7 +45,6 @@ const parsers = .{
     .file = clap.parsers.string,
     .format = clap.parsers.string,
     .keys = clap.parsers.string,
-    .OUT_MODE = clap.parsers.enumeration(OutMode),
 };
 
 pub var diag = clap.Diagnostic{};

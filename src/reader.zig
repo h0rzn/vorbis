@@ -21,13 +21,8 @@ pub const Reader = struct {
     /// readOne reads a single byte and returns a u8. If reading fails
     /// it errors. If bytes read is not exactly 1, UnexpectedOEF is returned.
     pub fn readOne(r: *Reader) !u8 {
-        // version 1
         var byte: [1]u8 = undefined;
         const read_count = try r.buf_reader.read(&byte);
-
-        // version 2
-        r.buf_reader.reader().readByte();
-        // ...
 
         return if (read_count == 1) byte[0] else error.UnexpectedOEF;
     }

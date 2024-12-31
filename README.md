@@ -2,28 +2,41 @@
 
 *Work In Progress*  
 
-Read out vorbis metadata from compatible flac and ogg files.  
-Allows output to be formatted as "raw" text, json and formatted text.
+Read vorbis metadata from compatible flac and ogg files.  
+Vorbis data can be printed as json, raw text and formatted text.
+Metadata fields can be filtered using `-f` flag.
 
+## Usage
 ```
---+ Raw Text +--
-COMMENT=Visit https://obliqueoccasions.bandcamp.com
-ALBUMARTIST=Oblique Occasions
-TRACKNUMBER=1
-TITLE=operation paperclip
-ARTIST=Oblique Occasions
-DATE=2024
-ALBUM=solipsism
+    -h, --help
+            Show usage help and exit.
 
---+ JSON +--
-{"COMMENT":"Visit https://obliqueoccasions.bandcamp.com","ALBUMARTIST":"Oblique Occasions","TRACKNUMBER":"1","TITLE":"operation paperclip","ARTIST":"Oblique Occasions","DATE":"2024","ALBUM":"solipsism"}
+    -v, --version
+            Show version information and exit.
 
---+ Pretty (with color) +--
-COMMENT: Visit https://obliqueoccasions.bandcamp.com
-ALBUMARTIST: Oblique Occasions
-TRACKNUMBER: 1
-TITLE: operation paperclip
-ARTIST: Oblique Occasions
-DATE: 2024
-ALBUM: solipsism
+    <file>
+            Specify input file. Supports both .ogg and .flac files.
+
+    -o, --output-format <format>
+            Specify output format. Supported formats: raw, pretty, json
+
+    -f, --fields <keys>
+            Specify fields to display by key. Use a comma separated list for multiple values.
 ```
+
+## Examples
+```bash
+vorbis
+\\ "Oblique Occasions - solipsism - 01 operation paperclip.flac" 
+\\ -o json 
+\\ -f artist,title,comment
+
+{"ARTIST":"Oblique Occasions","TITLE":"operation paperclip","COMMENT":"Visit https://obliqueoccasions.bandcamp.com"}
+```
+
+
+
+
+vorbis "Oblique Occasions - solipsism - 01 operation paperclip.flac" \ 
+        -o json \  
+        -f artist,title,comment

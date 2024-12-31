@@ -28,7 +28,7 @@ pub fn readOGG(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment 
     var i: usize = 0;
     var read_capture = false;
     while (true) {
-        const page: Page = try readPage(alloc, reader, read_capture);
+        const page = try readPage(alloc, reader, read_capture);
         defer {
             page.deinit(alloc);
             alloc.destroy(page);

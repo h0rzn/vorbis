@@ -26,7 +26,7 @@ Metadata fields can be filtered using `-f` flag.
 
 ## Examples
 ```bash
-vorbis
+$ vorbis
 \\ "Oblique Occasions - solipsism - 01 operation paperclip.flac" 
 \\ -o json 
 \\ -f artist,title,comment
@@ -34,9 +34,3 @@ vorbis
 {"ARTIST":"Oblique Occasions","TITLE":"operation paperclip","COMMENT":"Visit https://obliqueoccasions.bandcamp.com"}
 ```
 
-
-
-
-vorbis "Oblique Occasions - solipsism - 01 operation paperclip.flac" \ 
-        -o json \  
-        -f artist,title,comment

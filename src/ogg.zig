@@ -22,6 +22,9 @@ pub const OggError = error{
     VorbisMissing,
 };
 
+/// MAX_PAGE_READ is the maximum of pages to read
+const MAX_PAGE_READ = 10;
+
 /// readOgg uses the reader to parse VorbisComment from a audio file.
 /// Pages are continuously parsed until vorbis data is found and returned.
 pub fn readOGG(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment {
@@ -45,6 +48,7 @@ pub fn readOGG(alloc: std.mem.Allocator, reader: *Reader) !vorbis.VorbisComment 
 
         i += 1;
         if (i == 1) read_capture = true;
+        if (i == MAX_PAGE_READ) break;
     }
     return OggError.VorbisMissing;
 }
@@ -98,7 +102,8 @@ const Page = struct {
 /// the segments of the `Page` body.
 fn readPage(alloc: std.mem.Allocator, reader: *Reader, read_capture: bool) !*Page {
     const page = try alloc.create(Page);
-    // read page header
+    errdefer alloc.destroy(page);
+
     const page_header = try readPageHeader(alloc, reader, read_capture);
     errdefer {
         page_header.deinit(alloc);
@@ -107,7 +112,6 @@ fn readPage(alloc: std.mem.Allocator, reader: *Reader, read_capture: bool) !*Pag
 
     // build packets based on segments
     const packets = try buildPackets(alloc, reader, page_header.segment_table);
-
     page.header = page_header;
     page.packets = packets;
 
@@ -227,11 +231,6 @@ fn buildPackets(alloc: std.mem.Allocator, reader: *Reader, page_segments: []u8) 
         defer alloc.free(segment_data);
         try current_packet.appendSlice(segment_data);
 
-        // FIXME: handle last segment
-        // if (segm_len == 0) {
-        //     std.debug.print("LAST SEG\n", .{});
-        // }
-
         // end of packet
         if (segm_len < 255) {
             try packets.append(try current_packet.toOwnedSlice());
@@ -239,7 +238,6 @@ fn buildPackets(alloc: std.mem.Allocator, reader: *Reader, page_segments: []u8) 
     }
 
     if (current_packet.items.len > 0) {
-        std.debug.print("incomplete package found!\n", .{});
         try packets.append(try current_packet.toOwnedSlice());
     }
 
@@ -250,8 +248,11 @@ fn buildPackets(alloc: std.mem.Allocator, reader: *Reader, page_segments: []u8) 
 /// `vorbisComment` identifies a packet as a "vorbis-packet".
 /// Also returns false if packet length < 6. The first byte read
 /// is the identification byte (`0x03`: vorbis comment).
+//  - 0x01: Identification header.
+//  - 0x03: Comment header (Vorbis comments).
+//  - 0x05: Setup header.
 pub fn vorbisComment(packet: []u8) bool {
-    if (packet.len < 6) return false;
+    if (packet.len < 7) return false;
 
     const ident_byte = packet[0];
     if (ident_byte != 0x03) return false;

@@ -45,7 +45,7 @@ pub fn main() !void {
             cli.printErr(err);
             return;
         };
-        const vorbis_comment = readComment(allocator, &reader, audio_type) catch |err| {
+        const vorbis_comment = audio_file.readComment(allocator, &reader, audio_type) catch |err| {
             cli.printErr(err);
             return;
         };
@@ -72,13 +72,4 @@ pub fn main() !void {
         },
         else => {},
     }
-}
-
-/// readComment runs a read function based on audio_type.
-/// Returns VorbisComment or error.
-fn readComment(alloc: std.mem.Allocator, reader: *Reader, audio_type: audio_file.AudioFileType) !vorbis.VorbisComment {
-    return switch (audio_type) {
-        .OGG => try ogg.readOGG(alloc, reader),
-        .FLAC => try flac.readFLAC(alloc, reader),
-    };
 }
